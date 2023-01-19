@@ -14,7 +14,7 @@ import mimetypes
 from django.conf import settings
 from django.db.models import Q
 from django.core.paginator import Paginator,PageNotAnInteger,Page,EmptyPage
-
+from knox.auth import TokenAuthentication
 
 
 
@@ -53,11 +53,26 @@ class MusicPlayView(RetrieveAPIView):
     queryset = Music.objects.all()
     serializer_class = MusicSerializer
     permission_classes=[AllowAny,]
+    
+
+    # def get(self, request,pk):
+    #     music=Music.objects.get(id=pk)
+    #     view=0
+    #     music.view_count=view+1
+    #     music.save()
+    #     return Response({
+    #         'message':'viewed',
+    #         'music':MusicSerializer(music,many=False).data
+    #     })
 
 class MusicDetailView(APIView):
-    permission_classes=[AllowAny,]
+    permission_classes=[IsAuthenticated,]
+    authentication_classes=[TokenAuthentication,]
     def get(self,request,slug):
+        # print(request.Meta)
         music=Music.objects.get(slug=slug)
+        
+
         return Response({
             'music':MusicSerializer(music,many=False).data
         })
@@ -104,11 +119,12 @@ class MusicSearchView(APIView):
 
 
 class MusicView(APIView):
+    permission_classes=[AllowAny,]
     def get(self,request):
         all_musics=Music.objects.all()
 
         page=request.GET.get('page')
-        paginator=Paginator(all_musics,2)
+        paginator=Paginator(all_musics,1)
 
         try:
             musics=paginator.page(page)
@@ -118,6 +134,10 @@ class MusicView(APIView):
         except EmptyPage:
             musics=paginator.page(paginator.num_pages)
         
+        print(paginator.num_pages)
+        
         return Response({
-            'musics':MusicSerializer(musics,many=True).data
+            'musics':MusicSerializer(musics,many=True).data,
+            'num_pages':paginator.num_pages,
+            'post_count':paginator.count
         })

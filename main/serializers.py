@@ -4,28 +4,28 @@ from .models import *
 from django.core.exceptions import ObjectDoesNotExist
 
 
-class UserSeralizer(serializers.ModelSerializer):
-    class Meta:
-        model=User
-        fields=['id','email','username','first_name','last_name','password','is_staff','is_superuser']
-        extra_kwargs={'password':{'write_only':True},'is_staff':{'read_only':True},'is_superuser':{'read_only':True}}
+# class UserSeralizer(serializers.ModelSerializer):
+#     class Meta:
+#         model=User
+#         fields=['id','email','username','first_name','last_name','password','is_staff','is_superuser']
+#         extra_kwargs={'password':{'write_only':True},'is_staff':{'read_only':True},'is_superuser':{'read_only':True}}
 
 
-        def create(self,validated_data):
-            user=User.objects.create(
-                email=validated_data['email'],first_name=validated_data['first_name'],
-                last_name=validated_data['last_name'],username=validated_data['username']
-            )
-            user.set_password(validated_data['password'])
-            user.save()
+#         def create(self,validated_data):
+#             user=User.objects.create(
+#                 email=validated_data['email'],first_name=validated_data['first_name'],
+#                 last_name=validated_data['last_name'],username=validated_data['username']
+#             )
+#             user.set_password(validated_data['password'])
+#             user.save()
 
-            try:
-                customer = Customer.objects.get(user=user)
-            except ObjectDoesNotExist:
-                customer = Customer.objects.create(user=user)
+#             try:
+#                 customer = Profile.objects.get(user=user)
+#             except ObjectDoesNotExist:
+#                 customer = Profile.objects.create(user=user)
 
 
-            return user
+#             return user
         
 class MusicSerializer(serializers.ModelSerializer):
     class Meta:
@@ -36,5 +36,5 @@ class MusicSerializer(serializers.ModelSerializer):
 
 class CustomerSerializer(serializers.ModelSerializer):
     class Meta:
-        model=Customer
+        model=Profile
         fields='__all__'

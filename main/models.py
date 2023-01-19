@@ -11,13 +11,14 @@ import os
 
 
 
-class Customer(models.Model):
+class Profile(models.Model):
     user=models.OneToOneField(User,null=True,blank=True,on_delete=models.CASCADE,unique=True)
     email=models.EmailField(null=True,blank=True)
     first_name=models.CharField(max_length=100,blank=True, null=True)
     second_name=models.CharField(max_length=100,blank=True, null=True)
     device = models.CharField(max_length=200, null=True, blank=True)
-    date_joined=models.DateTimeField(auto_now_add=True)
+    activation_token=models.CharField(max_length=200,null=True, blank=True)
+    date_joined=models.DateTimeField(auto_now=True)
 
 
     def __str__(self):
@@ -40,11 +41,12 @@ class Music(models.Model):
     image=models.ImageField(upload_to='image/',default='image/4762573.jpg',null=True,blank=True,)
     slug=models.SlugField(null=True,blank=True)
     genre=models.CharField(max_length=100,blank=True,null=True, choices=Genre)
+    view_count=models.PositiveBigIntegerField(null=True,blank=True,default=0)
     # duration=models.CharField(max_length=20,blank=True,null=True)
     favourite=models.ManyToManyField(User,blank=True)
     audio=ContentTypeRestrictedFileField(upload_to='audio/',blank=True,null=True,)
     description=models.TextField(max_length=1000,null=True,blank=True)
-    date_added=models.DateTimeField(auto_now_add=True)
+    date_added=models.DateTimeField(auto_now=True)
 
     def save(self,*args,**kwargs):
         # audio_dirs=os.getcwd()+'/static/'+self.audio.url
