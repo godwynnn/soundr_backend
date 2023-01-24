@@ -46,7 +46,7 @@ class Music(models.Model):
     favourite=models.ManyToManyField(User,blank=True)
     audio=ContentTypeRestrictedFileField(upload_to='audio/',blank=True,null=True,)
     description=models.TextField(max_length=1000,null=True,blank=True)
-    date_added=models.DateTimeField(auto_now=True)
+    date_added=models.DateTimeField(auto_now_add=True)
 
     def save(self,*args,**kwargs):
         # audio_dirs=os.getcwd()+'/static/'+self.audio.url

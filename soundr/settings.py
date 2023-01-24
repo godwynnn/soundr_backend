@@ -12,6 +12,12 @@ https://docs.djangoproject.com/en/4.1/ref/settings/
 
 from pathlib import Path
 import os
+
+
+import environ
+# Initialise environment variables
+env = environ.Env()
+environ.Env.read_env()
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -38,6 +44,7 @@ REST_FRAMEWORK = {
 # 'knox.auth.TokenAuthentication',
 # 'rest_framework.authentication.SessionAuthentication',
 'rest_framework.authentication.BasicAuthentication',
+'rest_framework.authentication.TokenAuthentication',
 ),
 
 
@@ -50,6 +57,18 @@ REST_FRAMEWORK = {
 'DEFAULT_PAGINATION_CLASS':'rest_framework.pagination.PageNumberPagination',
 'PAGE_SIZE': 50
 }
+
+
+
+# Authentication backends
+AUTHENTICATION_BACKENDS = [
+    'django.contrib.auth.backends.ModelBackend',
+    'social_core.backends.google.GoogleOAuth2',
+
+    # 'social_core.backends.open_id.OpenIdAuth',  # for Google authentication
+    # 'social_core.backends.google.GoogleOpenId',  # for Google authentication
+]
+
 
 # Application definition
 
@@ -65,6 +84,7 @@ INSTALLED_APPS = [
     'rest_framework',
     "corsheaders",
     "knox",
+    'social_django',
 ]
 
 MIDDLEWARE = [
@@ -188,3 +208,23 @@ REST_KNOX={
     'AUTO_REFRESH':True,
     'EXPIRY_DATETIME_FORMAT':api_settings.DATETIME_FORMAT,
 }
+
+# SOCIAL_AUTH_JSONFIELD_ENABLED = True
+
+
+
+SOCIAL_AUTH_PIPELINE = (
+    'social_core.pipeline.social_auth.social_details',
+    'social_core.pipeline.social_auth.social_uid',
+    'social_core.pipeline.social_auth.auth_allowed',
+    'social_core.pipeline.social_auth.social_user',
+    'social_core.pipeline.social_auth.associate_user',
+    'social_core.pipeline.social_auth.load_extra_data',
+    'social_core.pipeline.user.user_details',
+)
+
+# ENVIRONMENTAL VARIABLES
+GOOGLE_CLIENT_ID=env('GOOGLE_CLIENT_ID')
+GOOGLE_CLIENT_SECRET=env('GOOGLE_CLIENT_SECRET')
+
+SOCIAL_AUTH_GOOGLE_OAUTH2_WHITELISTED_DOMAINS = ['localhost:3000','127.0.0.1:8000']

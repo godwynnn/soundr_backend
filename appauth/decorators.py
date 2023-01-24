@@ -3,5 +3,5 @@ from django.http import HttpResponseRedirect
 from rest_framework import status
 
 
-def isAuthenticated(verifyfunc):
+def isAuthenticated(view_func):
     pass

@@ -14,6 +14,15 @@ from django.contrib.auth.models import User
 from knox.auth import AuthToken
 from django.contrib.auth import login,logout,authenticate
 from rest_framework import status
+
+from social_django.utils import psa
+from knox.auth import TokenAuthentication
+
+from requests.exceptions import HTTPError
+from django.conf import settings
+from knox.auth import AuthToken
+from rest_framework.decorators import api_view, permission_classes
+
 # Create your views here.
 
 def generated_token():
@@ -108,6 +117,12 @@ class LoginView(APIView):
     permission_classes = (AllowAny,)
     authentication_classes = (BasicAuthentication,)
     serializer_class = UserSerializer
+
+    def get(self,request):
+        return Response({
+            'g_client_id':settings.GOOGLE_CLIENT_ID,
+            'g_client_secret':settings.GOOGLE_CLIENT_SECRET
+        })
     def post(self,request):
         
         try:
@@ -134,7 +149,45 @@ class LoginView(APIView):
             },status=status.HTTP_400_BAD_REQUEST)
 
 
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+@psa()
+def register_by_access_token(request, backend):
+    token = request.data.get('access_token')
+    # user = backend.do_auth(token)
+    user = request.backend.do_auth(token)
+
+    print(request)
+    if user:
+        token, _ = AuthToken.objects.get_or_create(user=user)
+        return Response(
+            {
+                'token': token.key
+            },
+            status=status.HTTP_200_OK,
+            )
+    else:
+        return Response(
+            {
+                'errors': {
+                    'token': 'Invalid token'
+                    }
+            },
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+
+
+
 class LogoutView(APIView):
-    authentication_classes=[IsAuthenticated]
-    def get(self, request):
-        pass
+    authentication_classes=[TokenAuthentication]
+    permission_classes=[IsAuthenticated]
+    
+    def post(self, request):
+        logout(request)
+
+        return Response({
+            'message': 'user succesfully loogged out',
+            'logged_out':True
+        })

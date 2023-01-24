@@ -27,7 +27,10 @@ class LandingPageView(APIView):
         
         
         musics=Music.objects.all()[:10]
-        
+        most_listened=list(Music.objects.all())
+        most_listened.sort(key=lambda x:-x.view_count)
+
+
         serialized_data=MusicSerializer(musics,many=True).data
         
 
@@ -45,29 +48,29 @@ class LandingPageView(APIView):
         
 
         return Response({
-            'music':serialized_data
+            'music':serialized_data,
+            'most_listened':MusicSerializer(most_listened,many=True).data
         })
 
 
-class MusicPlayView(RetrieveAPIView):
-    queryset = Music.objects.all()
+class MusicPlayView(APIView):
+    # queryset = Music.objects.all()
     serializer_class = MusicSerializer
     permission_classes=[AllowAny,]
     
 
-    # def get(self, request,pk):
-    #     music=Music.objects.get(id=pk)
-    #     view=0
-    #     music.view_count=view+1
-    #     music.save()
-    #     return Response({
-    #         'message':'viewed',
-    #         'music':MusicSerializer(music,many=False).data
-    #     })
+    def get(self, request,pk):
+        music=Music.objects.get(id=pk)
+        music.view_count+=1
+        music.save()
+        return Response({
+            'message':'viewed',
+            'music':MusicSerializer(music,many=False).data
+        })
 
 class MusicDetailView(APIView):
-    permission_classes=[IsAuthenticated,]
-    authentication_classes=[TokenAuthentication,]
+    permission_classes=[AllowAny,]
+    # authentication_classes=[TokenAuthentication,]
     def get(self,request,slug):
         # print(request.Meta)
         music=Music.objects.get(slug=slug)
@@ -141,3 +144,8 @@ class MusicView(APIView):
             'num_pages':paginator.num_pages,
             'post_count':paginator.count
         })
+
+
+class CreatMusicView(APIView):
+    def post(self,request):
+        pass
