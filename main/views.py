@@ -15,8 +15,16 @@ from django.conf import settings
 from django.db.models import Q
 from django.core.paginator import Paginator,PageNotAnInteger,Page,EmptyPage
 from knox.auth import TokenAuthentication
+import json
 
+def UserProfile(user):
+    try:
+        user_profile=Profile.objects.get(user=user)
+    except ObjectDoesNotExist:
+        user_profile=[]
 
+    return user_profile
+        
 
 class LandingPageView(APIView):
     queryset = Music.objects.all()
@@ -146,6 +154,51 @@ class MusicView(APIView):
         })
 
 
-class CreatMusicView(APIView):
+class CreateMusicView(APIView):
+    permission_classes=[AllowAny]
+
+    def get(self,request):
+        genre=SongGenre.objects.all()
+        return Response({
+            'genre':GenreSerializer(genre,many=True).data
+        })
+
+
     def post(self,request):
-        pass
+
+
+        # genre=SongGenre.objects.get(id=request.data.get('genre'))
+        print(request.data)
+
+        serializer=MusicSerializer(data=request.data)
+        if serializer.is_valid():
+            serialized_data=serializer.save()
+            return Response({
+                'message':'upload successful',
+                'payload':MusicSerializer(serialized_data,many=False).data
+            })
+        else:
+            return Response({
+                'message':'invalid data',
+                'payload':request.data
+            })
+
+        
+        # try:
+        #     music=Music.objects.create(
+        #         artist_name=request.data.get('artist_name'),
+        #         title=request.data.get('title'),
+        #         image=request.data.get('image'),
+        #         audio=request.data.get('audio'),
+        #         description=request.data.get('description'),
+        #         genre=genre
+        #     )
+        #     return Response({
+        #         'message':'upload successful',
+        #         'payload':MusicSerializer(music,many=False).data
+        #     })
+        # except:
+        #     return Response({
+        #         'message':'invalid data',
+        #         'payload':request.data
+        #     })

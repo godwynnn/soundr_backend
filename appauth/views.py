@@ -22,6 +22,7 @@ from requests.exceptions import HTTPError
 from django.conf import settings
 from knox.auth import AuthToken
 from rest_framework.decorators import api_view, permission_classes
+from appauth.decorators import *
 
 # Create your views here.
 
@@ -118,6 +119,7 @@ class LoginView(APIView):
     authentication_classes = (BasicAuthentication,)
     serializer_class = UserSerializer
 
+    @isloggedin
     def get(self,request):
         return Response({
             'g_client_id':settings.GOOGLE_CLIENT_ID,
@@ -158,12 +160,12 @@ def register_by_access_token(request, backend):
     # user = backend.do_auth(token)
     user = request.backend.do_auth(token)
 
-    print(request)
+    # print(request)
     if user:
-        token, _ = AuthToken.objects.get_or_create(user=user)
+        token = AuthToken.objects.create(user=user)
         return Response(
             {
-                'token': token.key
+                'token': token[1]
             },
             status=status.HTTP_200_OK,
             )
@@ -183,6 +185,7 @@ def register_by_access_token(request, backend):
 class LogoutView(APIView):
     authentication_classes=[TokenAuthentication]
     permission_classes=[IsAuthenticated]
+
     
     def post(self, request):
         logout(request)

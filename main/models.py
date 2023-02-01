@@ -28,25 +28,33 @@ class Profile(models.Model):
         ordering= ['-date_joined']
 
 
+class SongGenre(models.Model):
+    name=models.CharField(max_length=100,blank=True, null=True)
+
+    def __str__(self):
+        return self.name
+
+
 class Music(models.Model):
-    Genre=(
-        ('Afro','Afro'),
-        ('Afro-pop','Afro-pop'),
-        ('Pop','Pop'),
-        ('Hip-pop','Hip-pop'),
-    )
+    # Genre=(
+    #     ('Afro','Afro'),
+    #     ('Afro-pop','Afro-pop'),
+    #     ('Pop','Pop'),
+    #     ('Hip-pop','Hip-pop'),
+    # )
     artist_name=models.CharField(max_length=100,blank=True, null=True)
     title=models.CharField(max_length=100,blank=True, null=True)
     price=models.IntegerField(null=True,blank=True,default=0)
     image=models.ImageField(upload_to='image/',default='image/4762573.jpg',null=True,blank=True,)
     slug=models.SlugField(null=True,blank=True)
-    genre=models.CharField(max_length=100,blank=True,null=True, choices=Genre)
+    # genre=models.CharField(max_length=100,blank=True,null=True, choices=Genre)
+    genre=models.ForeignKey(SongGenre,null=True,blank=True,on_delete=models.CASCADE)
     view_count=models.PositiveBigIntegerField(null=True,blank=True,default=0)
     # duration=models.CharField(max_length=20,blank=True,null=True)
     favourite=models.ManyToManyField(User,blank=True)
-    audio=ContentTypeRestrictedFileField(upload_to='audio/',blank=True,null=True,)
+    audio=models.FileField(upload_to='audio/',blank=True,null=True,)
     description=models.TextField(max_length=1000,null=True,blank=True)
-    date_added=models.DateTimeField(auto_now_add=True)
+    date_added=models.DateTimeField(auto_now_add=True,blank=True,null=True)
 
     def save(self,*args,**kwargs):
         # audio_dirs=os.getcwd()+'/static/'+self.audio.url

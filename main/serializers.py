@@ -38,3 +38,8 @@ class CustomerSerializer(serializers.ModelSerializer):
     class Meta:
         model=Profile
         fields='__all__'
+
+class GenreSerializer(serializers.ModelSerializer):
+    class Meta:
+        model=SongGenre
+        fields='__all__'

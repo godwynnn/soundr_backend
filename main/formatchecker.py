@@ -18,7 +18,7 @@ class ContentTypeRestrictedFileField(FileField):
             500MB - 429916160
 """
 MAX_UPLOAD_SIZE='10485760'
-CONTENT_TYPES=['audio/mp4','audio/mp3']
+CONTENT_TYPES=['audio/mp4','audio/mp3','audio/m4a']
 def __init__(self, *args, **kwargs):
     self.content_types = kwargs.pop(CONTENT_TYPES)
     self.max_upload_size = kwargs.pop(MAX_UPLOAD_SIZE)
