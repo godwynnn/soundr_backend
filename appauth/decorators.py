@@ -19,7 +19,8 @@ def isloggedin(view_func):
     def wrapper_func(self,*args,**kwargs):
         if self.request.user.is_authenticated:
             return Response({
-                'message':'user is logged in'
+                'message':'user is logged in',
+                'authenticated':True
             })
             
         else:

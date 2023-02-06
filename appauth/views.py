@@ -119,7 +119,7 @@ class LoginView(APIView):
     authentication_classes = (BasicAuthentication,)
     serializer_class = UserSerializer
 
-    @isloggedin
+    
     def get(self,request):
         return Response({
             'g_client_id':settings.GOOGLE_CLIENT_ID,
@@ -133,15 +133,22 @@ class LoginView(APIView):
         
 
             if check_password(password,user.password):
-                login(request,user)
-                serialized_data = UserSerializer(user)
-                token=AuthToken.objects.create(user=user)[1]
+                if user.is_active == True:
 
-                return Response({
-                    'token':token,
-                    'user':serialized_data.data,
-                    'status':status.HTTP_202_ACCEPTED
-                },status=status.HTTP_202_ACCEPTED)
+                
+                    serialized_data = UserSerializer(user)
+                    token=AuthToken.objects.create(user=user)[1]
+                    # login(request,user)
+
+                    return Response({
+                        'token':token,
+                        'user':serialized_data.data,
+                        'status':status.HTTP_202_ACCEPTED
+                    },status=status.HTTP_202_ACCEPTED)
+                else:
+                    return Response({
+                        'message':'this users account is not active, activate through you mail'
+                    })
             else:
                 return Response({"wrong_credentials": True,'status':status.HTTP_400_BAD_REQUEST}, status=status.HTTP_400_BAD_REQUEST)
         except:
@@ -188,9 +195,10 @@ class LogoutView(APIView):
 
     
     def post(self, request):
+        token=AuthToken.objects.filter(user=request.user).delete()
         logout(request)
 
         return Response({
-            'message': 'user succesfully loogged out',
+            'message': 'user succesfully logged out',
             'logged_out':True
         })

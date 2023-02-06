@@ -17,6 +17,8 @@ class Profile(models.Model):
     first_name=models.CharField(max_length=100,blank=True, null=True)
     second_name=models.CharField(max_length=100,blank=True, null=True)
     device = models.CharField(max_length=200, null=True, blank=True)
+    followers=models.ManyToManyField(User,blank=True,related_name='followers')
+    followering=models.ManyToManyField(User,blank=True,related_name='following')
     activation_token=models.CharField(max_length=200,null=True, blank=True)
     date_joined=models.DateTimeField(auto_now=True)
 
@@ -42,6 +44,7 @@ class Music(models.Model):
     #     ('Pop','Pop'),
     #     ('Hip-pop','Hip-pop'),
     # )
+    user=models.ForeignKey(User,null=True,blank=True,on_delete=models.CASCADE)
     artist_name=models.CharField(max_length=100,blank=True, null=True)
     title=models.CharField(max_length=100,blank=True, null=True)
     price=models.IntegerField(null=True,blank=True,default=0)
@@ -51,9 +54,12 @@ class Music(models.Model):
     genre=models.ForeignKey(SongGenre,null=True,blank=True,on_delete=models.CASCADE)
     view_count=models.PositiveBigIntegerField(null=True,blank=True,default=0)
     # duration=models.CharField(max_length=20,blank=True,null=True)
-    favourite=models.ManyToManyField(User,blank=True)
+    favourite=models.ManyToManyField(User,blank=True,related_name='favourites')
+    share_to=models.ManyToManyField(User,blank=True,related_name='share_to')
+
     audio=models.FileField(upload_to='audio/',blank=True,null=True,)
     description=models.TextField(max_length=1000,null=True,blank=True)
+    timestamp=models.DateTimeField(null=True,blank=True)
     date_added=models.DateTimeField(auto_now_add=True,blank=True,null=True)
 
     def save(self,*args,**kwargs):

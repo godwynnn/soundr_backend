@@ -9,5 +9,7 @@ urlpatterns=[
     path('search',MusicSearchView.as_view(),name='music_search'),
     path('recent',MusicView.as_view(),name='music_search'),
     path('create',CreateMusicView.as_view(),name='create_music'),
+    path('add/favourite',AddToFavourite.as_view(),name='add_favourite'),
+    path('remove/favourite',RemoveFromFavourite.as_view(),name='remove_favourite'),
     
 ]
