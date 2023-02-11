@@ -5,7 +5,7 @@ from rest_framework.permissions import AllowAny,IsAuthenticated,IsAuthenticatedO
 from .models import *
 from django.core.exceptions import ObjectDoesNotExist
 from .serializers import *
-
+from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.generics import ListAPIView,RetrieveAPIView
 
 from rest_framework.views import APIView
@@ -21,6 +21,8 @@ from rest_framework.parsers import FileUploadParser,FormParser,MultiPartParser
 from appauth.serializers import *
 import datetime
 from django.utils import timezone
+from django.contrib.auth.models import User
+from push_notifications.models import APNSDevice, GCMDevice
 
 def UserProfile(user):
     try:
@@ -32,7 +34,32 @@ def UserProfile(user):
     return user_profile
 
 
+def HasMorePost(request):
+    if int(request.GET.get('offset')) > Music.objects.all().count():
+        return True
+    return False
 
+
+def CreateFollowNotification(request,user_id):
+    
+    try:
+        created_notif=Notifications.objects.filter(from_user=request.user)
+        # if user_id != created_notif.to_user.id:
+        notification=Notifications.objects.create(
+        from_user=request.user,
+        to_user=User.objects.get(id=user_id)
+        )
+
+        follow=True
+    
+        
+        
+    except:
+        notification=[]
+        follow=False
+
+    return follow
+        
 # def RecentlyViewed(request,id=None):
 #     music_ids=[]
 #     if id in music_ids:
@@ -50,25 +77,38 @@ def UserProfile(user):
 
 
 
+class MusicPaginationLimit(LimitOffsetPagination):
+    default_limit = 2
+    max_limit = 1000000
+    min_limit = 1
+    min_offset = 0
+    max_offset = 1000000
 
-        
 
 class LandingPageView(APIView):
     queryset = Music.objects.all()
     serializer_class = MusicSerializer
     permission_classes=[IsAuthenticatedOrReadOnly,]
     authentication_classes=[TokenAuthentication]
+    pagination_class =MusicPaginationLimit
+    
+
+    # limit_query_param  ='limit'
 
     def get(self,request):
         # print(request.user.id)
         # user=User.objects.get(id=request.user.id) 
         # profile=[]
-        musics=Music.objects.all()[:10]
+        musics=self.queryset[:10]
         most_listened=list(Music.objects.all())
         most_listened.sort(key=lambda x:-x.view_count)
         serialized_data=MusicSerializer(musics,many=True).data
 
         if request.user.is_authenticated:
+            musics=Music.objects.all()
+            paginator = self.pagination_class()
+            result_page = paginator.paginate_queryset(musics, request)
+            serialized_data=MusicSerializer(result_page,many=True).data
             profile=UserProfile(request.user)
             for data in serialized_data:
                 # data['audio']={}
@@ -92,11 +132,15 @@ class LandingPageView(APIView):
 
             # for serializer in profile_serializer:
             profile_serializer['user']=UserSerializer(User.objects.get(id=profile_serializer['user']),many=False).data
+            # music=paginator.get_paginated_response(serialized_data)
+            # return music
             return Response({
                 'profile':profile_serializer,
                 'music':serialized_data,
+                'music_len':musics.count(),
                 'most_listened':MusicSerializer(most_listened,many=True).data,
-                'recently_viewed':MusicSerializer(recently_viewed,many=True).data
+                'recently_viewed':MusicSerializer(recently_viewed,many=True).data,
+                'more_posts':HasMorePost(request)
 
             })
  
@@ -147,16 +191,33 @@ class MusicPlayView(APIView):
         })
 
 class MusicDetailView(APIView):
-    permission_classes=[AllowAny,]
-    # authentication_classes=[TokenAuthentication,]
+    permission_classes=[IsAuthenticatedOrReadOnly,]
+    authentication_classes=[TokenAuthentication,]
     def get(self,request,slug):
         # print(request.Meta)
         music=Music.objects.get(slug=slug)
+        if request.user.is_authenticated:
+            # music=Music.objects.get(slug=slug)
+            profile=UserProfile(request.user)
+            profile_serializer=ProfileSerializer(profile,many=False).data
+            
+            user=[]
+            for user_profile in profile_serializer['followers']:
+                user_profile=UserSerializer(User.objects.get(id=user_profile),many=False).data
+                user.append(user_profile)
+            
+            profile_serializer['followers']=user
+            
+            
+
+            return Response({
+            'music':MusicSerializer(music,many=False).data,
+            'profile':profile_serializer
+            })
+            
         
 
-        return Response({
-            'music':MusicSerializer(music,many=False).data
-        })
+        return Response({'music':MusicSerializer(music,many=False).data})
 
 class MusicDownloadView(APIView):
     permission_classes=[AllowAny,]
@@ -202,7 +263,8 @@ class MusicSearchView(APIView):
 class MusicView(APIView):
     permission_classes=[AllowAny,]
     def get(self,request):
-        all_musics=Music.objects.all()
+        all_musics=Music.objects.all().order_by('-date_added')
+        print(request.GET.get('page'))
 
         page=request.GET.get('page')
         paginator=Paginator(all_musics,2)
@@ -215,7 +277,7 @@ class MusicView(APIView):
         except EmptyPage:
             musics=paginator.page(paginator.num_pages)
         
-        print(paginator.num_pages)
+        # print(paginator.num_pages)
         
         return Response({
             'musics':MusicSerializer(musics,many=True).data,
@@ -308,6 +370,59 @@ class RemoveFromFavourite(APIView):
             })
 
 
-class AddFollowersView(APIView):
+class FollowersView(APIView):
+    authentication_classes=[TokenAuthentication]
+    permission_classes=[IsAuthenticated]
     def get(self,request):
+        user_id=request.GET.get('user_id')
+
+        try:
+            profile=Profile.objects.get(user__id=user_id)
+        except ObjectDoesNotExist:
+            return Response('user don\'t have profile status')
+
+        profile.followers.add(request.user)
+
+        try:
+            logged_profile=Profile.objects.get(user=request.user)
+        except ObjectDoesNotExist:
+            return Response('user don\'t have profile status')
+        
+        logged_profile.following.add(profile.user)
+        follow=CreateFollowNotification(request,user_id)
+        if request.user in profile.followers.all():
+
+            return Response({
+                'message': f'following {profile.user}',
+                'following':follow,
+               
+            })
+
+        if profile.user in request.user.following:
+            return Response({
+                'message': f'following...',
+                'following':follow,
+               
+            })
+        
+        
+
+class UserProfileView(APIView):
+    authentication_classes=[TokenAuthentication]
+    permission_classes=[IsAuthenticated]
+    def get(self,request):
+        profile=UserProfile(request.user)
+        profile_serializer=ProfileSerializer(profile,many=False).data
+
+        # for serializer in profile_serializer:
+        profile_serializer['user']=UserSerializer(User.objects.get(id=profile_serializer['user']),many=False).data
+
+        return Response({
+            'profile':profile_serializer,
+        })
+
+
+class SharePostToFollowersView(APIView):
+    def post(self,request):
+        user_ids=list(request.data.get('user_ids'))
         pass

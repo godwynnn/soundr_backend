@@ -6,6 +6,7 @@ from django.core.exceptions import ObjectDoesNotExist
 from rest_framework.permissions import AllowAny,IsAuthenticated
 from .serializers import *
 # from main.serializers import 
+from rest_framework.pagination import LimitOffsetPagination
 import random
 from django.core.mail import send_mail
 from django.contrib.auth.hashers import make_password,check_password
@@ -46,6 +47,7 @@ def generated_token():
 class RegistrationView(APIView):
     permission_classes=[AllowAny,]
     serializer_class=UserSerializer
+    
 
     def get(self,request):
         
@@ -78,7 +80,8 @@ class RegistrationView(APIView):
             user=User.objects.get(email=str(request.data['email']).lower())
             return Response({
                 'message':'user with email already exist',
-                'payload': UserSerializer(user,many=False).data
+                'payload': UserSerializer(user,many=False).data,
+                'signed_in':False
             })
 
         
@@ -109,7 +112,7 @@ class RegistrationView(APIView):
                 return Response({
                     'user':serialiized_data,
                     'profile':ProfileSerializer(profile,many=False).data,
-                    'signed-in':True
+                    'signed_in':True
                 })
 
 
@@ -166,13 +169,23 @@ def register_by_access_token(request, backend):
     token = request.data.get('access_token')
     # user = backend.do_auth(token)
     user = request.backend.do_auth(token)
+    print(token)
 
     # print(request)
     if user:
+        # new_user=User.objects.get(user=user)
+        profile=Profile.objects.get_or_create(
+            user=user,
+            first_name=user.first_name,
+            second_name=user.last_name,
+            email=user.email
+
+            )
         token = AuthToken.objects.create(user=user)
         return Response(
             {
-                'token': token[1]
+                'token': token[1],
+                'profile':ProfileSerializer(profile,many=False).data
             },
             status=status.HTTP_200_OK,
             )

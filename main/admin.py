@@ -6,3 +6,4 @@ from .models import *
 admin.site.register(Music)
 admin.site.register(Profile)
 admin.site.register(SongGenre)
+admin.site.register(Notifications)

@@ -17,8 +17,9 @@ class Profile(models.Model):
     first_name=models.CharField(max_length=100,blank=True, null=True)
     second_name=models.CharField(max_length=100,blank=True, null=True)
     device = models.CharField(max_length=200, null=True, blank=True)
+    image=models.ImageField(null=True,blank=True,upload_to='image/users_img',default='image/4762573.jpg')
     followers=models.ManyToManyField(User,blank=True,related_name='followers')
-    followering=models.ManyToManyField(User,blank=True,related_name='following')
+    following=models.ManyToManyField(User,blank=True,related_name='following')
     activation_token=models.CharField(max_length=200,null=True, blank=True)
     date_joined=models.DateTimeField(auto_now=True)
 
@@ -94,3 +95,14 @@ class Music(models.Model):
 
     class Meta:
         ordering= ['-date_added']
+
+
+class Notifications(models.Model):
+    from_user=models.ForeignKey(User,null=True,blank=True,on_delete=models.CASCADE,related_name='from_user_notif')
+    to_user=models.ForeignKey(User,null=True,blank=True,on_delete=models.CASCADE,related_name='to_user_notif')
+    date_followed=models.DateTimeField(auto_now_add=True,blank=True,null=True)
+    seen=models.BooleanField(blank=True,default=False)
+
+    def __str__(self):
+        return f'From {self.from_user.username} to {self.to_user.username} Notification'
+
