@@ -38,6 +38,36 @@ class SongGenre(models.Model):
         return self.name
 
 
+class Package(models.Model):
+   
+    name=models.CharField(max_length=100,null=True,blank=True)
+    limit=models.PositiveIntegerField(null=True,blank=True)
+    amount=models.PositiveIntegerField(null=True,blank=True)
+    date_created=models.DateTimeField(auto_now_add=True)
+
+
+    def __str__(self):
+
+        return "{} package".format(self.name)
+
+
+class UserPackage(models.Model):
+    user=models.ForeignKey(User,null=True,blank=True,on_delete=models.CASCADE,related_name='user_package')
+    package=models.ForeignKey(Package,null=True,blank=True,on_delete=models.CASCADE)
+    txref=models.CharField(max_length=500,null=True,blank=True)
+    ps_txref= models.CharField(max_length=500,null=True,blank=True)
+    date_created=models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering=['-date_created']
+
+    def __str__(self):
+
+        return "{} of {}".format(self.package.name,self.user.email)
+
+
+
+
 class Music(models.Model):
     # Genre=(
     #     ('Afro','Afro'),
@@ -46,6 +76,7 @@ class Music(models.Model):
     #     ('Hip-pop','Hip-pop'),
     # )
     user=models.ForeignKey(User,null=True,blank=True,on_delete=models.CASCADE)
+    package=models.ForeignKey(UserPackage,null=True,blank=True,on_delete=models.CASCADE)
     artist_name=models.CharField(max_length=100,blank=True, null=True)
     title=models.CharField(max_length=100,blank=True, null=True)
     price=models.IntegerField(null=True,blank=True,default=0)

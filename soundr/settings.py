@@ -244,3 +244,13 @@ PUSH_NOTIFICATIONS_SETTINGS = {
         "GCM_API_KEY": "[your api key]",
         "APNS_CERTIFICATE": "/path/to/your/certificate.pem",
 }
+
+# flutterwave environmental variables
+FLW_SECRET_KEY=env('FLW_SECRET_KEY')
+FLW_PUBLIC_KEY=env('FLW_PUBLIC_KEY')
+FLW_ENCRYPTION_KEY=env('FLW_ENCRYPTION_KEY')
+
+
+# paystack environmental variables
+PSTACK_PUBLIC_KEY=env('PSTACK_PUBLIC_KEY')
+PSTACK_SECRET_KEY=env('PSTACK_SECRET_KEY')

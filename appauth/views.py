@@ -24,6 +24,8 @@ from django.conf import settings
 from knox.auth import AuthToken
 from rest_framework.decorators import api_view, permission_classes
 from appauth.decorators import *
+from main.models import *
+from main.serializers import *
 
 # Create your views here.
 
@@ -99,6 +101,12 @@ class RegistrationView(APIView):
                 
                 profile.activation_token=make_password(activation_token)
                 profile.save()
+
+                package=Package.objects.get(name='bronze')
+                UserPackage.objects.create(
+                    user=user,
+                    package=package
+                )
                 
                 send_mail(
                 'Soundr account verification',
@@ -182,6 +190,11 @@ def register_by_access_token(request, backend):
 
             )
         token = AuthToken.objects.create(user=user)
+        package=Package.objects.get(name='bronze')
+        UserPackage.objects.create(
+            user=user,
+            package=package
+        )
         return Response(
             {
                 'token': token[1],

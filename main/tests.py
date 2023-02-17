@@ -16,3 +16,5 @@
 # print(newasks)
 
 # code=random.choices(ini_code)
+
+

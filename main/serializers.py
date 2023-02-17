@@ -49,3 +49,15 @@ class NotificationSerializer(serializers.ModelSerializer):
     class Meta:
         model=Notifications
         fields='__all__'
+
+
+class PackagesSerializer(serializers.ModelSerializer):
+    class Meta:
+        model=Package
+        fields='__all__'
+
+
+class UserPackagesSerializer(serializers.ModelSerializer):
+    class Meta:
+        model=UserPackage
+        fields='__all__'

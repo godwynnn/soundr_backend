@@ -16,13 +16,27 @@ from django.db.models import Q
 from django.core.paginator import Paginator,PageNotAnInteger,Page,EmptyPage
 from knox.auth import TokenAuthentication
 import json
-from rest_framework.parsers import FileUploadParser,FormParser,MultiPartParser
+from rest_framework.parsers import FileUploadParser,FormParser,MultiPartParser,JSONParser
 
 from appauth.serializers import *
 import datetime
 from django.utils import timezone
 from django.contrib.auth.models import User
+from functools import partial
 from push_notifications.models import APNSDevice, GCMDevice
+from django.conf import settings
+from rave_python import Rave
+from .flutterwave import FlutterWaveRavePayment
+from .paystack import PaystackPayment
+from pypaystack import Transaction, Customer, Plan
+
+
+from django.core.mail import send_mail
+
+
+
+transaction = Transaction(authorization_key=settings.PSTACK_SECRET_KEY)
+
 
 def UserProfile(user):
     try:
@@ -306,12 +320,20 @@ class CreateMusicView(APIView):
        
 
         serializer=MusicSerializer(data=request.data)
+        user_package=UserPackage.objects.filter(user=request.user).first()
         if serializer.is_valid():
-            serialized_data=serializer.save(user=request.user)
-            return Response({
-                'message':'upload successful',
-                'payload':MusicSerializer(serialized_data,many=False).data
-            })
+            if len(Music.objects.filter(user=request.user)) <= user_package.package.limit:
+                serialized_data=serializer.save(user=request.user,package=user_package)
+                return Response({
+                    'message':'upload successful',
+                    'payload':MusicSerializer(serialized_data,many=False).data
+                })
+            else:
+                return Response({
+                    'message':f'you\'ve reached the max upload of {user_package.package.limit} songs for this package',
+                    'status': False
+                })
+            
         else:
             return Response({
                 'message':'invalid data',
@@ -320,7 +342,7 @@ class CreateMusicView(APIView):
 
 
 
-class AddToFavourite(APIView):
+class AddRemoveFavourite(APIView):
     authentication_classes=[TokenAuthentication]
     permission_classes=[IsAuthenticated]
     def post(self,request):
@@ -330,10 +352,11 @@ class AddToFavourite(APIView):
 
         favourite=False
         if request.user in music.favourite.all():
-            favourite=True
+            music.favourite.remove(request.user)
+            # favourite=True
             return Response({
                 'message':'music already added to favorites',
-                'favourite':True
+                'favourite':False
             })
         else:
             favourite=True
@@ -425,4 +448,133 @@ class UserProfileView(APIView):
 class SharePostToFollowersView(APIView):
     def post(self,request):
         user_ids=list(request.data.get('user_ids'))
+        pass
+
+
+class Packages(APIView):
+    permission_classes=[IsAuthenticatedOrReadOnly]
+    authentication_classes=[TokenAuthentication]
+    def get(self,request):
+
+        try:
+            package=Package.objects.get(id=request.GET.get('package_id'))
+            if request.user.is_authenticated:
+
+                profile=UserProfile(request.user)
+                profile_serializer=ProfileSerializer(profile,many=False).data
+
+                # for serializer in profile_serializer:
+                profile_serializer['user']=UserSerializer(User.objects.get(id=profile_serializer['user']),many=False).data
+
+                return Response({
+                'package':PackagesSerializer(package,many=False).data,
+                'flw_secret_key':settings.FLW_SECRET_KEY,
+                'flw_public_key':settings.FLW_PUBLIC_KEY,
+                'p_stack_public_key':settings.PSTACK_PUBLIC_KEY,
+                'p_stack_secret_key':settings.PSTACK_SECRET_KEY,
+                'profile':profile_serializer,
+                })
+
+
+            return Response({
+                'package':PackagesSerializer(package,many=False).data
+            })
+
+        except:
+            
+           
+            
+            packages=Package.objects.all()
+            
+            if request.user.is_authenticated:
+                
+                user_packages=UserPackage.objects.filter(user=request.user)
+                all_packages=PackagesSerializer(packages,many=True).data
+                for all_package in all_packages:
+                    
+                    all_package['purchased']=''
+                    status=False
+                    for user_package in user_packages:
+                        if all_package['id']== user_package.package.id:
+                            status=True
+                            # purchased.append(status)
+                    all_package['purchased']=status
+                        
+                return Response({
+                'packages':all_packages
+                })
+            else:
+                return Response({
+                    'packages':  PackagesSerializer(packages,many=True).data
+                })
+            
+
+class PaymentView(APIView):
+    permission_classes=[IsAuthenticated]
+    authentication_classes=[TokenAuthentication]
+    parser_classes=[JSONParser]
+    def post(self,request):
+        payment_type=request.GET.get('type')
+
+        try:
+            package=Package.objects.get(id=request.GET.get('package_id'))
+            
+        except ObjectDoesNotExist:
+            # package=None
+            return Response({
+                'message':'Package not available'
+            })
+        
+
+        profile=Profile.objects.get(user=request.user)
+
+        if payment_type == 'flw':
+            flw_data=request.data
+            print(flw_data)
+            response=FlutterWaveRavePayment(flw_data,profile)
+            if response['transactionComplete'] and flw_data['status'] == 'successful':
+                user_package=UserPackage.objects.create(
+                    user=request.user,
+                    package=package,
+                    txref=flw_data["tx_ref"]
+                )
+                send_mail(
+                f'Soundr {package.name} purchased, refID: {flw_data["tx_ref"]}',
+                f'hello {profile.first_name} {profile.second_name} you\'ve purchased soundr\'s {package.name} package and limited to an upload of {package.limit} songs',
+                'from soundr@gmail.com',
+                [profile.user.email],
+                
+                )
+                return Response({
+                    'status':'success',
+                    'message': f'soundr {package.name} successfully purchased'
+                })       
+        if payment_type =='paystack':
+            pstack_data=request.data
+            print(pstack_data)
+            response=PaystackPayment(pstack_data,profile)
+            if response and pstack_data['status'] == 'success':
+
+                user_package=UserPackage.objects.create(
+                    user=request.user,
+                    package=package,
+                    txref=pstack_data["reference"]
+
+                )
+                send_mail(
+                f'Soundr {package.name} purchased, refID: {pstack_data["reference"]}',
+                f'hello {profile.first_name} {profile.second_name} you\'ve purchased soundr\'s {package.name} package and limited to an upload of {package.limit} songs',
+                'from soundr@gmail.com',
+                [profile.user.email],
+                
+                )
+
+                return Response({
+                    'status':'success',
+                    'message': f'soundr {package.name} successfully purchased'
+                })
+        
+
+class UserDashboardView(APIView):
+    def get(self,request):
         pass

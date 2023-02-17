@@ -9,9 +9,13 @@ urlpatterns=[
     path('search',MusicSearchView.as_view(),name='music_search'),
     path('recent',MusicView.as_view(),name='music_search'),
     path('create',CreateMusicView.as_view(),name='create_music'),
-    path('add/favourite',AddToFavourite.as_view(),name='add_favourite'),
-    path('remove/favourite',RemoveFromFavourite.as_view(),name='remove_favourite'),
+    path('add/favourite',AddRemoveFavourite.as_view(),name='add_favourite'),
+    # path('remove/favourite',RemoveFromFavourite.as_view(),name='remove_favourite'),
     path('follow',FollowersView.as_view(),name='follow'),
     path('user/profile',UserProfileView.as_view(),name='user_profile'),
+
+
+    path('packages',Packages.as_view(),name='packages'),
+    path('payment',PaymentView.as_view(),name='payment'),
     
 ]
