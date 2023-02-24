@@ -221,11 +221,16 @@ class MusicDetailView(APIView):
                 user.append(user_profile)
             
             profile_serializer['followers']=user
+
+            serialized_data=MusicSerializer(music,many=False).data
+            serialized_data['posted_by_user']=False
+            if request.user.id == serialized_data['user']:
+                serialized_data['posted_by_user']=True
             
             
 
             return Response({
-            'music':MusicSerializer(music,many=False).data,
+            'music':serialized_data,
             'profile':profile_serializer
             })
             
@@ -340,6 +345,41 @@ class CreateMusicView(APIView):
                 'payload':request.data
             })
 
+
+class UpdateMusicView(APIView):
+    authentication_classes=[TokenAuthentication]
+    permission_classes=[IsAuthenticated]
+    parser_classes=[MultiPartParser,FormParser]
+
+    def get(self,request,pk):
+        genre=SongGenre.objects.all()
+        music=Music.objects.get(id=pk)
+        serialized_data=MusicSerializer(music,many=False).data
+        serialized_data['posted_by_user']=False
+        if request.user.id == serialized_data['user']:
+            serialized_data['posted_by_user']=True
+        
+        return Response({
+                'music':serialized_data,
+                'genre':GenreSerializer(genre,many=True).data,
+            })
+
+    def put(self,request,id):
+        try:
+            music=Music.objects.get(id=id)
+        except ObjectDoesNotExist:
+            return Response({
+                'message':'music don\'t exist'
+            })
+
+        serializer=MusicSerializer(data=request.data,instance=music)
+        if serializer.is_valid():
+            serialized_data=serializer.save(user=request.user)
+            serialized_data=serialized_data.instance
+
+            return Response({
+                'music':MusicSerializer(serialized_data).data
+            })
 
 
 class AddRemoveFavourite(APIView):
@@ -574,6 +614,27 @@ class PaymentView(APIView):
                     'message': f'soundr {package.name} successfully purchased'
                 })
         
+
+class UserFavourite(APIView):
+    authentication_classes=[TokenAuthentication,]
+    permission_classes=[IsAuthenticated,]
+    def get(self,request):
+        favourites=Music.objects.filter(favourite=request.user)
+        user_favourite=MusicSerializer(favourites,many=True).data
+
+        for favourite in user_favourite:
+            favourite['status']=True
+            if request.user.id not in favourite['favourite']:
+                favourite['status']=False
+        
+        
+
+        return Response({
+            'favourite':user_favourite
+        })
+
+
+
 
 class UserDashboardView(APIView):
     def get(self,request):
